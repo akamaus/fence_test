@@ -25,8 +25,11 @@ void *reader(void *p) {
 
     while(!stop) {
         iter_counter++;
-        aa = a.load(std::memory_order_seq_cst);
-        bb = b.load(std::memory_order_seq_cst);
+        atomic_thread_fence(std::memory_order_seq_cst);
+        aa = a.load(std::memory_order_acquire);
+        atomic_thread_fence(std::memory_order_seq_cst);
+        bb = b.load(std::memory_order_acquire);
+        atomic_thread_fence(std::memory_order_seq_cst);
         if (aa < bb) {
             cnt_less++;
 //            printf("%u-", iter_counter); fflush(stdout);
@@ -48,8 +51,11 @@ void *writer(void *p) {
     printf("writer started\n");
     uint counter = 0;
     while(!stop) {
-        a.store(counter, std::memory_order_seq_cst);
-        b.store(counter, std::memory_order_seq_cst);
+        atomic_thread_fence(std::memory_order_seq_cst);
+        a.store(counter, std::memory_order_release);
+        atomic_thread_fence(std::memory_order_seq_cst);
+        b.store(counter, std::memory_order_release);
+        atomic_thread_fence(std::memory_order_seq_cst);
         counter++;
     }
 }
