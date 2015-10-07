@@ -2,69 +2,56 @@
 #include <pthread.h>
 #include <unistd.h>
 
-/* typedef unsigned int uint; */
+#include <atomic>
+
+typedef unsigned int uint;
 typedef unsigned long int uint64_t;
 
-volatile uint64_t flag = 0;
-volatile uint64_t data = 0;
+std::atomic<uint> a(0);
+std::atomic<uint> b(0);
 
 volatile bool stop = false;
 
 void *reader(void *p) {
     uint64_t iter_counter = 0;
+    uint cnt_less = 0,
+         cnt_eq = 0,
+         cnt_more = 0;
+
+    uint aa, bb;
+
+
     printf("reader started\n");
-
-    uint64_t cnt_le = 0, cnt_gt = 0;
-
-    uint64_t _flag = 0;
-    uint64_t _data = 0;
 
     while(!stop) {
         iter_counter++;
-
-        uint64_t tmp_flag = __sync_val_compare_and_swap(&flag, _flag, flag);
-
-        if( tmp_flag != _flag ) {
-          uint64_t tmp_data = data;
-
-          if(tmp_data <= _data) {
-            cnt_le++;
-          }
-          else {
-            /* Right */
-            cnt_gt++;
-          }
-
-          _data = tmp_data;
-          _flag = tmp_flag;
+        aa = a.load(std::memory_order_seq_cst);
+        bb = b.load(std::memory_order_seq_cst);
+        if (aa < bb) {
+            cnt_less++;
+//            printf("%u-", iter_counter); fflush(stdout);
+//            iter_counter = 0;
+        } else if (aa > bb) {
+            cnt_more++;
+//            printf("%u+", iter_counter); fflush(stdout);
+//            iter_counter = 0;
+        } else {
+            cnt_eq++;
         }
     }
-
-    printf("iters=%llu, less=%llu, more=%llu\n", iter_counter, cnt_le, cnt_gt);
+        printf("iters=%lu, less=%u, eq=%u, more=%u\n", iter_counter, cnt_less, cnt_eq, cnt_more);
 
     return NULL;
 }
 
 void *writer(void *p) {
     printf("writer started\n");
-    volatile uint64_t counter = 1;
-    volatile uint64_t overflows = 0;
+    uint counter = 0;
     while(!stop) {
-
-        /* data = counter; */
-        __sync_fetch_and_add(&data,1);
-        asm volatile ("mfence" ::: "memory");
-
-        __sync_fetch_and_add(&flag,1);
-        /* flag = counter; */
-        asm volatile ("mfence" ::: "memory");
-
+        a.store(counter, std::memory_order_seq_cst);
+        b.store(counter, std::memory_order_seq_cst);
         counter++;
-        if(counter == (uint64_t)(-1))
-          overflows++;
     }
-
-    printf("overflows=%llu\n", overflows);
 }
 
 int main() {
