@@ -2,11 +2,13 @@
 #include <pthread.h>
 #include <unistd.h>
 
+#include <atomic>
+
 typedef unsigned int uint;
 typedef unsigned long int uint64_t;
 
-volatile uint a = 0;
-volatile uint b = 0;
+std::atomic<uint> a(0);
+std::atomic<uint> b(0);
 
 volatile bool stop = false;
 
@@ -24,27 +26,25 @@ void *reader(void *p) {
 
     while(!stop) {
         iter_counter++;
-        bb = b;
+        bb = b.load();
+        atomic_thread_fence(std::memory_order_seq_cst);
 
         if (bb != old_bb) {
-            asm volatile ("mfence" ::: "memory");
 
-            aa = a;
+            aa = a.load();
 
             if (old_aa < aa ) {
                 cnt_less++;
-            }
-            else if (old_aa > aa) {
+            } else if (old_aa > aa) {
                 cnt_more++;
             } else {
                 cnt_eq++;
+                printf("old_aa=%u old_bb=%u; aa=%u bb=%u\n", old_aa, old_bb, aa,bb);
             }
             old_aa = aa;
             old_bb = bb;
         }
-        asm volatile ("mfence" ::: "memory");
 
-//        asm volatile ("mfence" ::: "memory");
     }
     printf("iters=%lu, less=%u, eq=%u, more=%u\n", iter_counter, cnt_less, cnt_eq, cnt_more);
 
@@ -55,11 +55,8 @@ void *writer(void *p) {
     printf("writer started\n");
     uint counter = 0;
     while(!stop) {
-        a = counter;
-        // asm volatile ("" ::: "memory");
-        asm volatile ("mfence" ::: "memory");
-        b = counter;
-        asm volatile ("mfence" ::: "memory");
+        a.store(counter);
+        b.store(counter);
 
         counter++;
     }

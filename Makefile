@@ -1,2 +1,2 @@
 test: test.cpp
-	gcc  -O2 test.cpp -o test -lpthread
+	gcc -g -O2 --std=c++11 test.cpp -o test -lpthread
