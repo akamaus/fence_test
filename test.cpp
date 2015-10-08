@@ -29,12 +29,8 @@ void *reader(void *p) {
         bb = b.load(std::memory_order_seq_cst);
         if (aa < bb) {
             cnt_less++;
-//            printf("%u-", iter_counter); fflush(stdout);
-//            iter_counter = 0;
         } else if (aa > bb) {
             cnt_more++;
-//            printf("%u+", iter_counter); fflush(stdout);
-//            iter_counter = 0;
         } else {
             cnt_eq++;
         }
