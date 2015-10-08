@@ -1,2 +1,2 @@
 test: test.cpp
-	gcc test.cpp -o test -lpthread
+	gcc  -O2 test.cpp -o test -lpthread

@@ -13,31 +13,40 @@ volatile bool stop = false;
 void *reader(void *p) {
     uint64_t iter_counter = 0;
     uint cnt_less = 0,
+         cnt_eq = 0,
          cnt_more = 0;
 
     uint aa, bb;
 
+    uint old_aa, old_bb;
 
     printf("reader started\n");
 
     while(!stop) {
         iter_counter++;
-        aa = a;
-//        asm volatile ("mfence" ::: "memory");
         bb = b;
+
+        if (bb != old_bb) {
+            asm volatile ("mfence" ::: "memory");
+
+            aa = a;
+
+            if (old_aa < aa ) {
+                cnt_less++;
+            }
+            else if (old_aa > aa) {
+                cnt_more++;
+            } else {
+                cnt_eq++;
+            }
+            old_aa = aa;
+            old_bb = bb;
+        }
+        asm volatile ("mfence" ::: "memory");
+
 //        asm volatile ("mfence" ::: "memory");
-        if (aa < bb) {
-            cnt_less++;
-//            printf("%u-", iter_counter); fflush(stdout);
-//            iter_counter = 0;
-        }
-        else if (aa > bb) {
-            cnt_more++;
-//            printf("%u+", iter_counter); fflush(stdout);
-//            iter_counter = 0;
-        }
     }
-    printf("iters=%lu, less=%u, more=%u\n", iter_counter, cnt_less, cnt_more);
+    printf("iters=%lu, less=%u, eq=%u, more=%u\n", iter_counter, cnt_less, cnt_eq, cnt_more);
 
     return NULL;
 }
